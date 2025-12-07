@@ -1,0 +1,6 @@
+@aresu_txt_editor_backend_HostAddress = http://localhost:5129
+
+GET {{aresu_txt_editor_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

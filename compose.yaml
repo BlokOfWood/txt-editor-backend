@@ -1,0 +1,7 @@
+﻿services:
+  aresu-txt-editor-backend:
+    image: aresu-txt-editor-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+

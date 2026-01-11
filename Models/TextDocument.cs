@@ -11,9 +11,18 @@ public class TextDocument
    public int Id { get; set; }
    
    [Required]
+   public int UserId { get; set; }
+   
+   [Required]
    [MaxLength(255)]
    public required string? Title { get; set; }
    
    // ReSharper disable once EntityFramework.ModelValidation.UnlimitedStringLength
    public required string? Content { get; set; }
+   
+   [Required]
+   public required DateTime CreatedAt { get; set; }
+   
+   [Required]
+   public required DateTime UpdatedAt { get; set; }
 }

@@ -1,8 +1,5 @@
 @aresu_txt_editor_backend_HostAddress = http://localhost:5129
 
-GET {{aresu_txt_editor_backend_HostAddress}}/weatherforecast/
-Accept: application/json
-
 ###
 
 POST {{aresu_txt_editor_backend_HostAddress}}/user/register
@@ -14,13 +11,23 @@ Content-Type: application/json
 }
 
 ###
-POST {{aresu_txt_editor_backend_HostAddress}}/user/register
+POST {{aresu_txt_editor_backend_HostAddress}}/user/login
 Content-Type: application/json
 
 {
-  "username": "testuser2",
+  "username": "testuser",
   "password": "Test@1234"
 }
 
-###
+### Document Endpoints
+
+### Get all documents
 GET {{aresu_txt_editor_backend_HostAddress}}/document
+
+### Create a new document
+POST {{aresu_txt_editor_backend_HostAddress}}/document
+Content-Type: application/json
+
+{
+  "title": "My First Document"
+}

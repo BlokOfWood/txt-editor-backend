@@ -65,7 +65,7 @@ public class AuthController(
         return Ok(new { message = "Logged out successfully" });
     }
 
-    /*
+    
     [HttpGet("me")]
     [Authorize]
     public IActionResult GetCurrentUser()
@@ -75,7 +75,6 @@ public class AuthController(
 
         return Ok(new { username, userId });
     }
-    */
 
     [HttpPost("register")]
     public IActionResult Register([FromBody] RegisterDto registerDto)

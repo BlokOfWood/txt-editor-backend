@@ -25,16 +25,23 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<MssqlDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+var authConfig = configSection.Get<AuthConfiguration>() ?? throw new Exception("Failed to bind Auth configuration");
+
 // Cookie-based authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.Cookie.Name = "AuthToken";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.MaxAge = TimeSpan.FromDays(authConfig.AccessTokenExpirationDays);
+        options.ExpireTimeSpan = TimeSpan.FromDays(authConfig.AccessTokenExpirationDays);
+        
         options.SlidingExpiration = true;
+
+        options.LoginPath = "/user/login";
+        options.LogoutPath = "/user/logout";
 
         // Return 401 instead of redirecting to login page for API
         options.Events.OnRedirectToLogin = context =>
@@ -54,18 +61,14 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-
-    // Set logger to debug level
 }
 
-app.UseHttpsRedirection();
-
 app.UseCors(policy =>
-    policy.AllowAnyOrigin()
+    policy.WithOrigins("http://localhost:4200")
+            .AllowCredentials()
           .AllowAnyMethod()
           .AllowAnyHeader());
 

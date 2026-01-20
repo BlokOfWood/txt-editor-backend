@@ -77,11 +77,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Run migrations
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<MssqlDbContext>();
-    dbContext.Database.Migrate();
-}
-
 app.Run("http://localhost:5129");

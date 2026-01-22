@@ -8,7 +8,7 @@ namespace aresu_txt_editor_backend.Services;
 
 public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService> _logger) : IDocumentService
 {
-    public async Task CreateNewDocument(DocumentDto newDocument, int userId)
+    public async Task CreateNewDocument(CreateDocumentDto newDocument, int userId)
     {
         try
         {

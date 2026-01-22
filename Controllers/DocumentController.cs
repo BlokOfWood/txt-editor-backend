@@ -36,7 +36,7 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
     [HttpPost()]
     [Authorize]
-    public async Task<IActionResult> AddNewDocument([FromBody] DocumentDto document)
+    public async Task<IActionResult> AddNewDocument([FromBody] CreateDocumentDto document)
     {
         var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 

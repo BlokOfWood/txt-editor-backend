@@ -16,4 +16,9 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
             .HasIndex(u => u.Username)
             .IsUnique();
     }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.AddInterceptors(new UpdatedAtTimestampInterceptor());
+    }
 }

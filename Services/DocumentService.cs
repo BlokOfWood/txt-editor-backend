@@ -23,7 +23,8 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         }
         catch (Exception e)
         {
-            _logger.LogError("Failed to create document. Error: {}", e.Message);
+            _logger.LogError(e, "Failed to create document.");
+            throw;
         }
 
         await _dbContext.SaveChangesAsync();
@@ -47,9 +48,29 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         }
         catch (Exception e)
         {
-            _logger.LogError("Failed to get documents for user with id {}. Error: {}", userId, e.Message);
+            _logger.LogError(e, "Failed to get documents for user with id {UserId}.", userId);
         }
-        
+
         return [];
+    }
+
+    public async Task<bool> UpdateDocument(int documentId, int userId, string newContent)
+    {
+        try
+        {
+            var rowsAffected = await _dbContext.TextDocuments
+                .Where(doc => doc.UserId == userId && doc.Id == documentId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Content, newContent));
+
+            if (rowsAffected == 0)
+                return false;
+        
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to update contents of document with id {DocumentId} for user with id {UserId}.", documentId, userId);
+            throw;
+        }
     }
 }

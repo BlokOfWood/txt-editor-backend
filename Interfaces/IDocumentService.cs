@@ -6,4 +6,5 @@ public interface IDocumentService
 {
    Task CreateNewDocument(CreateDocumentDto newDocument, int userId); 
    Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId);
+   Task<bool> UpdateDocument(int documentId, int userId, string newContent);
 }

@@ -1,3 +1,4 @@
+using aresu_txt_editor_backend.Models;
 using aresu_txt_editor_backend.Models.Dtos;
 
 namespace aresu_txt_editor_backend.Interfaces;
@@ -6,5 +7,6 @@ public interface IDocumentService
 {
    Task CreateNewDocument(CreateDocumentDto newDocument, int userId); 
    Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId);
+   Task<TextDocument?> GetDocumentById(int documentId, int userId);
    Task<bool> UpdateDocument(int documentId, int userId, string newContent);
 }

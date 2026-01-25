@@ -30,6 +30,22 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         await _dbContext.SaveChangesAsync();
     }
 
+    public async Task<TextDocument?> GetDocumentById(int documentId, int userId)
+    {
+        try
+        {
+            return await _dbContext.TextDocuments
+            .AsNoTracking()
+            .Where(doc => doc.Id == documentId && doc.UserId == userId)
+            .FirstOrDefaultAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to get document with id {Id} for user with id {UserId}", documentId, userId);
+            throw;
+        }
+    }
+
     public async Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId)
     {
         try
@@ -64,7 +80,7 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
 
             if (rowsAffected == 0)
                 return false;
-        
+
             return true;
         }
         catch (Exception e)

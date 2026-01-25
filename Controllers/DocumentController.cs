@@ -44,4 +44,16 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
         return result ? Ok() : NotFound();
     }
+
+    [HttpGet("{id}")]
+    [Authorize]
+    [ValidateUserId]
+    public async Task<IActionResult> GetDocumentById(int id)
+    {
+        int userId = (int)HttpContext.Items["UserId"]!;
+
+        var result = await _documentService.GetDocumentById(id, userId);
+
+        return result is not null ? Ok(result) : NotFound();
+    }
 }

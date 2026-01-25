@@ -12,6 +12,7 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 {
     [HttpGet]
     [Authorize]
+    [ValidateUserId]
     public async Task<IActionResult> GetDocumentTitles()
     {
         int userId = (int)HttpContext.Items["UserId"]!;
@@ -24,6 +25,7 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
     [HttpPost()]
     [Authorize]
+    [ValidateUserId]
     public async Task<IActionResult> AddNewDocument([FromBody] CreateDocumentDto document)
     {
         int userId = (int)HttpContext.Items["UserId"]!;

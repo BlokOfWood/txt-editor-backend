@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using aresu_txt_editor_backend.Filters;
 using aresu_txt_editor_backend.Interfaces;
 using aresu_txt_editor_backend.Models.Dtos;
 using Microsoft.AspNetCore.Authorization;
@@ -14,21 +14,9 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
     [Authorize]
     public async Task<IActionResult> GetDocumentTitles()
     {
+        int userId = (int)HttpContext.Items["UserId"]!;
+
         // TODO: implement paging 
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (userIdString == null)
-        {
-            return Unauthorized();
-        }
-
-        var parseResult = int.TryParse(userIdString, out int userId);
-
-        if (!parseResult)
-        {
-            return Unauthorized();
-        }
-
         var documents = _documentService.GetUserDocuments(userId);
 
         return Ok(await documents);
@@ -38,19 +26,7 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
     [Authorize]
     public async Task<IActionResult> AddNewDocument([FromBody] CreateDocumentDto document)
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (userIdString == null)
-        {
-            return Unauthorized();
-        }
-
-        var parseResult = int.TryParse(userIdString, out int userId);
-
-        if (!parseResult)
-        {
-            return Unauthorized();
-        }
+        int userId = (int)HttpContext.Items["UserId"]!;
 
         await _documentService.CreateNewDocument(document, userId);
 
@@ -59,21 +35,10 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
     [HttpPost("{id}")]
     [Authorize]
+    [ValidateUserId]
     public async Task<IActionResult> ModifyDocumentText(int id, [FromBody] ModifyDocumentDto document)
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (userIdString == null)
-        {
-            return Unauthorized();
-        }
-
-        var parseResult = int.TryParse(userIdString, out int userId);
-
-        if (!parseResult)
-        {
-            return Unauthorized();
-        }
+        int userId = (int)HttpContext.Items["UserId"]!;
 
         var result = await _documentService.UpdateDocument(id, userId, document.Text);
 

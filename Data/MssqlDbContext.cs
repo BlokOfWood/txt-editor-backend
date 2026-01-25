@@ -15,6 +15,13 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
+
+        modelBuilder.Entity<TextDocument>()
+            .HasIndex(doc => new {doc.Id, doc.UserId});
+
+        modelBuilder.Entity<TextDocument>()
+            .Property(doc => doc.Content)
+            .HasDefaultValue("");
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,10 +16,10 @@ public class TextDocument
    
    [Required]
    [MaxLength(255)]
-   public required string? Title { get; set; }
+   public required string Title { get; set; }
    
-   // ReSharper disable once EntityFramework.ModelValidation.UnlimitedStringLength
-   public required string? Content { get; set; }
+   [Required]
+   public required string Content { get; set; }
    
    [Required]
    public required DateTime CreatedAt { get; set; }

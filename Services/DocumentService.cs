@@ -30,13 +30,14 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<TextDocument?> GetDocumentById(int documentId, int userId)
+    public async Task<DocumentContentDto?> GetDocumentById(int documentId, int userId)
     {
         try
         {
             return await _dbContext.TextDocuments
             .AsNoTracking()
             .Where(doc => doc.Id == documentId && doc.UserId == userId)
+            .Select((doc) => new DocumentContentDto { Content = doc.Content!, Title = doc.Title! })
             .FirstOrDefaultAsync();
         }
         catch (Exception e)

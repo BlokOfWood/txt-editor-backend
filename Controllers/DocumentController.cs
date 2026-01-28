@@ -30,9 +30,9 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
     {
         int userId = (int)HttpContext.Items["UserId"]!;
 
-        await _documentService.CreateNewDocument(document, userId);
+        bool success = await _documentService.CreateNewDocument(document, userId);
 
-        return Ok();
+        return success ? Ok() : Conflict();
     }
 
     [HttpPost("{id}")]

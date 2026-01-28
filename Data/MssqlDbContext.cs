@@ -20,6 +20,10 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
             .HasIndex(doc => new {doc.Id, doc.UserId});
 
         modelBuilder.Entity<TextDocument>()
+            .HasIndex(doc => new {doc.Title, doc.UserId})
+            .IsUnique();
+
+        modelBuilder.Entity<TextDocument>()
             .Property(doc => doc.Content)
             .HasDefaultValue("");
     }

@@ -2,24 +2,33 @@ using aresu_txt_editor_backend.Data;
 using aresu_txt_editor_backend.Interfaces;
 using aresu_txt_editor_backend.Models;
 using aresu_txt_editor_backend.Models.Dtos;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace aresu_txt_editor_backend.Services;
 
 public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService> _logger) : IDocumentService
 {
-    public async Task CreateNewDocument(CreateDocumentDto newDocument, int userId)
+    public async Task<bool> CreateNewDocument(CreateDocumentDto newDocument, int userId)
     {
         try
         {
             await _dbContext.TextDocuments.AddAsync(new TextDocument()
             {
                 Title = newDocument.Title,
-                Content = string.Empty,
+                Content = newDocument.Content ?? string.Empty,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             });
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException e) when
+            (e.InnerException is SqlException sqlE &&
+            sqlE.Number is (int)MssqlErrorCode.CannotInsertDuplicateKey or (int)MssqlErrorCode.UniqueConstraintViolation)
+        {
+            _logger.LogDebug("User with id {UserId} tried to insert document with a title that already exists.", userId);
+            return false;
         }
         catch (Exception e)
         {
@@ -27,7 +36,7 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             throw;
         }
 
-        await _dbContext.SaveChangesAsync();
+        return true;
     }
 
     public async Task<DocumentContentDto?> GetDocumentById(int documentId, int userId)

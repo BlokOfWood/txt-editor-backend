@@ -42,7 +42,10 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
     {
         int userId = (int)HttpContext.Items["UserId"]!;
 
-        var result = await _documentService.UpdateDocument(id, userId, document.Text);
+        if (document.Title == null && document.Content == null)
+            return BadRequest();
+
+        var result = await _documentService.UpdateDocument(id, userId, document);
 
         return result ? Ok() : NotFound();
     }

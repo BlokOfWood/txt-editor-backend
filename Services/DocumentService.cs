@@ -80,18 +80,35 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         return [];
     }
 
-    public async Task<bool> UpdateDocument(int documentId, int userId, string newContent)
+    public async Task<bool> UpdateDocument(int documentId, int userId, ModifyDocumentDto newContent)
     {
         try
         {
-            var rowsAffected = await _dbContext.TextDocuments
-                .Where(doc => doc.UserId == userId && doc.Id == documentId)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Content, newContent));
+            var documentRow = _dbContext.TextDocuments
+                .Where(doc => doc.UserId == userId && doc.Id == documentId);
 
-            if (rowsAffected == 0)
-                return false;
+            bool someRowsAffected = false;
 
-            return true;
+            if (newContent.Title != null)
+            {
+                var rowsAffected = await _dbContext.TextDocuments
+                    .Where(doc => doc.UserId == userId && doc.Id == documentId)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Title, newContent.Title));
+
+                if (rowsAffected != 0)
+                    someRowsAffected = true;
+            }
+            if (newContent.Content != null)
+            {
+                var rowsAffected = await _dbContext.TextDocuments
+                    .Where(doc => doc.UserId == userId && doc.Id == documentId)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Content, newContent.Content));
+
+                if (rowsAffected != 0)
+                    someRowsAffected = true;
+            }
+
+            return someRowsAffected;
         }
         catch (Exception e)
         {

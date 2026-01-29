@@ -8,6 +8,6 @@ public interface IDocumentService
    Task<bool> CreateNewDocument(CreateDocumentDto newDocument, int userId); 
    Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId);
    Task<DocumentContentDto?> GetDocumentById(int documentId, int userId);
-   Task<bool> UpdateDocument(int documentId, int userId, string newContent);
+   Task<bool> UpdateDocument(int documentId, int userId, ModifyDocumentDto newContent);
    Task<bool> DeleteDocument(int documentId, int userId);
 }

@@ -58,4 +58,16 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
         return result is not null ? Ok(result) : NotFound();
     }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    [ValidateUserId]
+    public async Task<IActionResult> DeleteDocumentById(int id)
+    {
+        int userId = (int)HttpContext.Items["UserId"]!;
+
+        var result = await _documentService.DeleteDocument(id, userId);
+
+        return result ? Ok() : NotFound();
+    }
 }

@@ -9,4 +9,5 @@ public interface IDocumentService
    Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId);
    Task<DocumentContentDto?> GetDocumentById(int documentId, int userId);
    Task<bool> UpdateDocument(int documentId, int userId, string newContent);
+   Task<bool> DeleteDocument(int documentId, int userId);
 }

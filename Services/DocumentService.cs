@@ -99,4 +99,24 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             throw;
         }
     }
+
+    public async Task<bool> DeleteDocument(int documentId, int userId)
+    {
+        try
+        {
+            var rowsAffected = await _dbContext.TextDocuments
+                .Where(doc => doc.UserId == userId && doc.Id == documentId)
+                .ExecuteDeleteAsync();
+
+            if (rowsAffected == 0)
+                return false;
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to update contents of document with id {DocumentId} for user with id {UserId}.", documentId, userId);
+            throw;
+        }
+    }
 }

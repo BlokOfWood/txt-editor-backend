@@ -10,15 +10,21 @@ namespace aresu_txt_editor_backend.Controllers;
 [Route("document")]
 public class DocumentController(IDocumentService _documentService, ILogger<DocumentController> _logger) : ControllerBase
 {
+    public const uint MaxRequestableDocumentCount = 100;
+
     [HttpGet]
     [Authorize]
     [ValidateUserId]
-    public async Task<IActionResult> GetDocumentTitles()
+    public async Task<IActionResult> GetDocumentTitles([FromQuery] int offset, [FromQuery] int quantity)
     {
+        if (MaxRequestableDocumentCount < quantity)
+        {
+            return BadRequest($"Maximum {MaxRequestableDocumentCount} pages may be requested at any time.");
+        }
+
         int userId = (int)HttpContext.Items["UserId"]!;
 
-        // TODO: implement paging 
-        var documents = _documentService.GetUserDocuments(userId);
+        var documents = _documentService.GetUserDocuments(offset, quantity, userId);
 
         return Ok(await documents);
     }
@@ -74,23 +80,23 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
         return result ? Ok() : NotFound();
     }
 
-    #if MOCKING
+#if MOCKING
 
     [HttpPost("mock")]
     [Authorize]
     [ValidateUserId]
-    public async Task<IActionResult> CreateMockDocuments([FromQuery]int quantity)
+    public async Task<IActionResult> CreateMockDocuments([FromQuery] int quantity)
     {
         int userId = (int)HttpContext.Items["UserId"]!;
-        
+
         _logger.LogDebug($"Creating {quantity} mock documents.");
 
-        if (quantity > 50000) 
+        if (quantity > 50000)
             return BadRequest();
 
         await _documentService.AddTestDocuments(quantity, userId);
 
         return Ok();
     }
-    #endif
+#endif
 }

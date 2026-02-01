@@ -56,28 +56,41 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         }
     }
 
-    public async Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId)
+    public async Task<DocumentBriefsDto> GetUserDocuments(int offset, int quantity, int userId)
     {
         try
         {
-            var documents = _dbContext.TextDocuments
-                .Where(x => x.UserId == userId)
-                .Select((document) => new DocumentBriefDto
+            var userDocuments = _dbContext.TextDocuments
+                .AsNoTracking()
+                .Where(x => x.UserId == userId);
+
+            var documentBriefs =
+                await userDocuments
+                .OrderBy(x => x.Id)
+                .Skip(offset)
+                .Take(quantity)
+                .Select((document) => new DocumentBrief
                 {
                     Id = document.Id,
                     Title = document.Title,
                     CreatedAt = document.CreatedAt,
                     UpdatedAt = document.UpdatedAt,
-                });
+                })
+                .ToListAsync();
 
-            return await documents.ToListAsync();
+            var userDocumentCount = await userDocuments.CountAsync();
+
+            return new()
+            {
+                DocumentBriefs = documentBriefs,
+                TotalDocumentCount = userDocumentCount
+            };
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to get documents for user with id {UserId}.", userId);
+            throw;
         }
-
-        return [];
     }
 
     public async Task<bool> UpdateDocument(int documentId, int userId, ModifyDocumentDto newContent)

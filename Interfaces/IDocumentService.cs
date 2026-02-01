@@ -6,7 +6,7 @@ namespace aresu_txt_editor_backend.Interfaces;
 public interface IDocumentService
 {
    Task<bool> CreateNewDocument(CreateDocumentDto newDocument, int userId); 
-   Task<IReadOnlyList<DocumentBriefDto>> GetUserDocuments(int userId);
+   Task<DocumentBriefsDto> GetUserDocuments(int offset, int quantity, int userId);
    Task<DocumentContentDto?> GetDocumentById(int documentId, int userId);
    Task<bool> UpdateDocument(int documentId, int userId, ModifyDocumentDto newContent);
    Task<bool> DeleteDocument(int documentId, int userId);

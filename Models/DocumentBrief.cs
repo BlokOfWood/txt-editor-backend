@@ -1,6 +1,6 @@
-namespace aresu_txt_editor_backend.Models.Dtos;
+namespace aresu_txt_editor_backend.Models;
 
-public class DocumentBriefDto
+public class DocumentBrief
 {
     public int Id { get; set; }
     public required string? Title { get; set; }

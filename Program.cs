@@ -37,7 +37,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.MaxAge = TimeSpan.FromDays(authConfig.AccessTokenExpirationDays);
         options.ExpireTimeSpan = TimeSpan.FromDays(authConfig.AccessTokenExpirationDays);
-        
+
         options.SlidingExpiration = true;
 
         options.LoginPath = "/user/login";

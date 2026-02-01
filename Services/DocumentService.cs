@@ -136,4 +136,26 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             throw;
         }
     }
+
+#if MOCKING 
+    public async Task AddTestDocuments(int quantity, int userId)
+    {
+        ReadOnlySpan<char> alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var newItems = new TextDocument[quantity];
+        for (int i = 0; i < quantity; i++)
+        {
+            newItems[i] = new()
+            {
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                UserId = userId,
+                Content = "",
+                Title = Random.Shared.GetString(alphanumeric, 41)
+            };
+        }
+
+        _dbContext.TextDocuments.AddRange(newItems);
+        await _dbContext.SaveChangesAsync();
+    }
+#endif
 }

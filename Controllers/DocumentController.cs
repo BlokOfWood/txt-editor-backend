@@ -8,7 +8,7 @@ namespace aresu_txt_editor_backend.Controllers;
 
 [ApiController]
 [Route("document")]
-public class DocumentController(IDocumentService _documentService) : ControllerBase
+public class DocumentController(IDocumentService _documentService, ILogger<DocumentController> _logger) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -73,4 +73,24 @@ public class DocumentController(IDocumentService _documentService) : ControllerB
 
         return result ? Ok() : NotFound();
     }
+
+    #if MOCKING
+
+    [HttpPost("mock")]
+    [Authorize]
+    [ValidateUserId]
+    public async Task<IActionResult> CreateMockDocuments([FromQuery]int quantity)
+    {
+        int userId = (int)HttpContext.Items["UserId"]!;
+        
+        _logger.LogDebug($"Creating {quantity} mock documents.");
+
+        if (quantity > 50000) 
+            return BadRequest();
+
+        await _documentService.AddTestDocuments(quantity, userId);
+
+        return Ok();
+    }
+    #endif
 }

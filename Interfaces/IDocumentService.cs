@@ -10,4 +10,8 @@ public interface IDocumentService
    Task<DocumentContentDto?> GetDocumentById(int documentId, int userId);
    Task<bool> UpdateDocument(int documentId, int userId, ModifyDocumentDto newContent);
    Task<bool> DeleteDocument(int documentId, int userId);
+
+   #if MOCKING 
+   Task AddTestDocuments(int number, int userId);
+   #endif
 }

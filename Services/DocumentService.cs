@@ -56,17 +56,19 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         }
     }
 
-    public async Task<DocumentBriefsDto> GetUserDocuments(int offset, int quantity, int userId)
+    public async Task<DocumentBriefsDto> GetUserDocuments(string query, int offset, int quantity, int userId)
     {
         try
         {
             var userDocuments = _dbContext.TextDocuments
                 .AsNoTracking()
-                .Where(x => x.UserId == userId);
+                .Where(x => x.UserId == userId && x.Title.Contains(query));
 
             var documentBriefs =
                 await userDocuments
-                .OrderBy(x => x.Id)
+                .OrderBy(x => x.Title.Equals(query) ? 0 : 1)
+                .ThenBy(x => x.Title.StartsWith(query) ? 0 : 1)
+                .ThenBy(x => x.Id)
                 .Skip(offset)
                 .Take(quantity)
                 .Select((document) => new DocumentBrief

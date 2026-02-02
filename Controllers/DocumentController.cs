@@ -15,7 +15,7 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
     [HttpGet]
     [Authorize]
     [ValidateUserId]
-    public async Task<IActionResult> GetDocumentTitles([FromQuery] int offset, [FromQuery] int quantity)
+    public async Task<IActionResult> GetDocumentTitles([FromQuery]string? query, [FromQuery] int offset, [FromQuery] int quantity)
     {
         if (MaxRequestableDocumentCount < quantity)
         {
@@ -24,7 +24,7 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
 
         int userId = (int)HttpContext.Items["UserId"]!;
 
-        var documents = _documentService.GetUserDocuments(offset, quantity, userId);
+        var documents = _documentService.GetUserDocuments(query ?? "", offset, quantity, userId);
 
         return Ok(await documents);
     }

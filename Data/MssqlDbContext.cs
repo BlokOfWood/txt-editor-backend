@@ -17,10 +17,10 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
             .IsUnique();
 
         modelBuilder.Entity<TextDocument>()
-            .HasIndex(doc => new {doc.Id, doc.UserId});
+            .HasIndex(doc => new {doc.UserId, doc.Id});
 
         modelBuilder.Entity<TextDocument>()
-            .HasIndex(doc => new {doc.Title, doc.UserId})
+            .HasIndex(doc => new {doc.UserId, doc.Title})
             .IsUnique();
 
         modelBuilder.Entity<TextDocument>()

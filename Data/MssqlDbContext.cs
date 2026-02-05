@@ -7,25 +7,24 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
 {
     public DbSet<TextDocument> TextDocuments { get; set; }
     public DbSet<User> Users { get; set; }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
 
         modelBuilder.Entity<TextDocument>()
-            .HasIndex(doc => new {doc.UserId, doc.Id});
+            .HasIndex(doc => new { doc.UserId, doc.Id });
 
         modelBuilder.Entity<TextDocument>()
-            .HasIndex(doc => new {doc.UserId, doc.Title})
+            .HasIndex(doc => new { doc.UserId, doc.Title })
             .IsUnique();
 
         modelBuilder.Entity<TextDocument>()
-            .Property(doc => doc.Content)
-            .HasDefaultValue("");
+            .Property(doc => doc.EncryptedContent);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

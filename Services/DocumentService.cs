@@ -16,7 +16,8 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             await _dbContext.TextDocuments.AddAsync(new TextDocument()
             {
                 Title = newDocument.Title,
-                Content = newDocument.Content ?? string.Empty,
+                EncryptedContent = newDocument.Content,
+                InitializationVector = newDocument.InitializationVector,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -46,7 +47,7 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             return await _dbContext.TextDocuments
             .AsNoTracking()
             .Where(doc => doc.Id == documentId && doc.UserId == userId)
-            .Select((doc) => new DocumentContentDto { Content = doc.Content!, Title = doc.Title! })
+            .Select((doc) => new DocumentContentDto { Content = doc.EncryptedContent!, Title = doc.Title!, InitializationVector = doc.InitializationVector })
             .FirstOrDefaultAsync();
         }
         catch (Exception e)
@@ -102,28 +103,29 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
             var documentRow = _dbContext.TextDocuments
                 .Where(doc => doc.UserId == userId && doc.Id == documentId);
 
-            bool someRowsAffected = false;
-
             if (newContent.Title != null)
             {
                 var rowsAffected = await _dbContext.TextDocuments
                     .Where(doc => doc.UserId == userId && doc.Id == documentId)
                     .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Title, newContent.Title));
 
-                if (rowsAffected != 0)
-                    someRowsAffected = true;
+                return true;
             }
-            if (newContent.Content != null)
+            if (newContent.Content != null && newContent.InitializationVector != null)
             {
                 var rowsAffected = await _dbContext.TextDocuments
                     .Where(doc => doc.UserId == userId && doc.Id == documentId)
-                    .ExecuteUpdateAsync(setters => setters.SetProperty(doc => doc.Content, newContent.Content));
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                    .SetProperty(doc => doc.EncryptedContent, newContent.Content)
+                    .SetProperty(doc => doc.InitializationVector, newContent.InitializationVector)
+                    );
 
-                if (rowsAffected != 0)
-                    someRowsAffected = true;
+
+                return true;
             }
 
-            return someRowsAffected;
+            return false;
         }
         catch (Exception e)
         {
@@ -152,7 +154,8 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
         }
     }
 
-#if MOCKING 
+#if MOCKING
+    // TODO: add valid combo of content and init vector
     public async Task AddTestDocuments(int quantity, int userId)
     {
         ReadOnlySpan<char> alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -164,7 +167,8 @@ public class DocumentService(MssqlDbContext _dbContext, ILogger<DocumentService>
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 UserId = userId,
-                Content = "",
+                EncryptedContent = [],
+                InitializationVector = [],
                 Title = Random.Shared.GetString(alphanumeric, 41)
             };
         }

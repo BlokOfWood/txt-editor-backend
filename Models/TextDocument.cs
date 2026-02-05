@@ -10,20 +10,24 @@ public class TextDocument
    [Required]
    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
    public int Id { get; set; }
-   
+
    [Required]
    public int UserId { get; set; }
-   
+
    [Required]
    [MaxLength(255)]
    public required string Title { get; set; }
-   
+
    [Required]
-   public required string Content { get; set; }
-   
+   public required byte[] EncryptedContent { get; set; }
+
+   [Required]
+   [MaxLength(12)]
+   public required byte[] InitializationVector { get; set; }
+
    [Required]
    public required DateTime CreatedAt { get; set; }
-   
+
    [Required]
    public required DateTime UpdatedAt { get; set; }
 }

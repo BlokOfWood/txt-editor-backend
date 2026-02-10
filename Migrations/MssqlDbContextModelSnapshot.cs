@@ -60,7 +60,7 @@ namespace aresu_txt_editor_backend.Migrations
                     b.HasIndex("UserId", "Title")
                         .IsUnique();
 
-                    b.ToTable("TextDocuments");
+                    b.ToTable("TextDocuments", (string)null);
                 });
 
             modelBuilder.Entity("aresu_txt_editor_backend.Models.User", b =>
@@ -86,7 +86,7 @@ namespace aresu_txt_editor_backend.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 #pragma warning restore 612, 618
         }

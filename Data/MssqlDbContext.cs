@@ -25,6 +25,12 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
 
         modelBuilder.Entity<TextDocument>()
             .Property(doc => doc.EncryptedContent);
+
+        modelBuilder.Entity<TextDocument>()
+            .HasOne<User>()
+            .WithMany()
+            .HasForeignKey(doc => doc.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

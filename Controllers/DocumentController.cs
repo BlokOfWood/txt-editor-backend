@@ -15,7 +15,7 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
     [HttpGet]
     [Authorize]
     [ValidateUserId]
-    public async Task<IActionResult> GetDocumentTitles([FromQuery]string? query, [FromQuery] int offset, [FromQuery] int quantity)
+    public async Task<IActionResult> GetDocumentTitles([FromQuery] string? query, [FromQuery] int offset, [FromQuery] int quantity)
     {
         if (MaxRequestableDocumentCount < quantity)
         {
@@ -29,7 +29,7 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
         return Ok(await documents);
     }
 
-    [HttpPost()]
+    [HttpPost]
     [Authorize]
     [ValidateUserId]
     public async Task<IActionResult> AddNewDocument([FromBody] CreateDocumentDto document)
@@ -78,6 +78,41 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
         var result = await _documentService.DeleteDocument(id, userId);
 
         return result ? Ok() : NotFound();
+    }
+
+    [Route("ws")]
+    [Authorize]
+    [ValidateUserId]
+    public async Task DocumentStateWebsocket()
+    {
+        if (!HttpContext.WebSockets.IsWebSocketRequest)
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+
+        var buffer = new byte[1024 * 4];
+        var receiveResult = await webSocket.ReceiveAsync(
+            new ArraySegment<byte>(buffer), CancellationToken.None);
+
+        while (!receiveResult.CloseStatus.HasValue)
+        {
+            await webSocket.SendAsync(
+                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
+                receiveResult.MessageType,
+                receiveResult.EndOfMessage,
+                CancellationToken.None);
+
+            receiveResult = await webSocket.ReceiveAsync(
+                new ArraySegment<byte>(buffer), CancellationToken.None);
+
+            _logger.LogCritical("{}", System.Text.Encoding.UTF8.GetString(buffer));
+        }
+
+
+
     }
 
 #if MOCKING

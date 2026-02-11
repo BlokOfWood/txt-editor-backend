@@ -3,6 +3,7 @@ using aresu_txt_editor_backend.Interfaces;
 using aresu_txt_editor_backend.Models;
 using aresu_txt_editor_backend.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.WebSockets;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,11 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<MssqlDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddWebSockets((options) =>
+{
+    options.KeepAliveTimeout = TimeSpan.FromSeconds(5);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+});
 
 var authConfig = configSection.Get<AuthConfiguration>() ?? throw new Exception("Failed to bind Auth configuration");
 
@@ -74,6 +80,7 @@ app.UseCors(policy =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseWebSockets();
 
 app.MapControllers();
 

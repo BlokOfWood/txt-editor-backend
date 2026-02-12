@@ -8,7 +8,7 @@ namespace aresu_txt_editor_backend.Controllers;
 
 [ApiController]
 [Route("document")]
-public class DocumentController(IDocumentService _documentService, ILogger<DocumentController> _logger) : ControllerBase
+public class DocumentController(IDocumentService _documentService, IOccupancyService _occupancyService, ILogger<DocumentController> _logger) : ControllerBase
 {
     public const uint MaxRequestableDocumentCount = 100;
 
@@ -87,32 +87,12 @@ public class DocumentController(IDocumentService _documentService, ILogger<Docum
     {
         if (!HttpContext.WebSockets.IsWebSocketRequest)
         {
-            Response.StatusCode = StatusCodes.Status400BadRequest;
-            return;
+            HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
         }
 
         using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-        var buffer = new byte[1024 * 4];
-        var receiveResult = await webSocket.ReceiveAsync(
-            new ArraySegment<byte>(buffer), CancellationToken.None);
-
-        while (!receiveResult.CloseStatus.HasValue)
-        {
-            await webSocket.SendAsync(
-                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
-                receiveResult.MessageType,
-                receiveResult.EndOfMessage,
-                CancellationToken.None);
-
-            receiveResult = await webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer), CancellationToken.None);
-
-            _logger.LogCritical("{}", System.Text.Encoding.UTF8.GetString(buffer));
-        }
-
-
-
+        await _occupancyService.NewSessionAsync(webSocket);
     }
 
 #if MOCKING

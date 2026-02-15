@@ -92,7 +92,8 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
 
         using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-        await _occupancyService.NewSessionAsync(webSocket);
+        int userId = (int)HttpContext.Items["UserId"]!;
+        await _occupancyService.NewSessionAsync(userId, webSocket);
     }
 
 #if MOCKING

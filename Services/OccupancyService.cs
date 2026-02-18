@@ -65,7 +65,7 @@ public class OccupancyService : IOccupancyService
             return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
 
         if (documentStateLookup.ContainsKey(documentId))
-            return DocumentLockOpResult.DOCUMENT_ALREADY_OCCUPIED;
+            return DocumentLockOpResult.DOCUMENT_OCCUPIED;
 
         if (occupiedDocumentEntry.documentId is not null)
             documentStateLookup.TryRemove(documentId, out var _);
@@ -84,15 +84,19 @@ public class OccupancyService : IOccupancyService
         if (occupiedDocumentEntry.userId != userId)
             return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
 
-        if (!documentStateLookup.TryRemove(documentId, out var _))
+        if (!documentStateLookup.TryGetValue(documentId, out var documentState))
             return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
 
+        if (documentState != sessionId)
+            return DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
+
+        documentStateLookup.TryRemove(documentId, out var _);
         sessionStateLookup[sessionId] = (userId, null);
 
         return DocumentLockOpResult.SUCCESS;
     }
 
-    public DocumentLockOpResult IsDocumentOccupiedBySessionId(int userId, long sessionId, int documentId)
+    public DocumentLockOpResult IsDocumentOccupied(int userId, long sessionId, int documentId)
     {
         if (!sessionStateLookup.TryGetValue(sessionId, out var occupiedDocumentEntry))
             return DocumentLockOpResult.INVALID_SESSION_ID;
@@ -100,6 +104,9 @@ public class OccupancyService : IOccupancyService
         if (occupiedDocumentEntry.userId != userId)
             return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
 
-        return documentStateLookup[userId] == documentId ? DocumentLockOpResult.SUCCESS : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
+        if (!documentStateLookup.TryGetValue(documentId, out var occupyingSessionId))
+            return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
+
+        return occupyingSessionId == documentId ? DocumentLockOpResult.DOCUMENT_OCCUPIED_BY_SESSION : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
     }
 }

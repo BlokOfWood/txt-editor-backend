@@ -1,4 +1,5 @@
 using aresu_txt_editor_backend.Data;
+using aresu_txt_editor_backend.Filters;
 using aresu_txt_editor_backend.Interfaces;
 using aresu_txt_editor_backend.Models;
 using aresu_txt_editor_backend.Services;
@@ -62,6 +63,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         };
     });
 
+builder.Services.AddScoped<ValidateSessionIdAttribute>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddSingleton<IOccupancyService, OccupancyService>();

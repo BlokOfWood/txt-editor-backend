@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace aresu_txt_editor_backend.Filters;
 
-public class ValidateUserIdAttribute : ActionFilterAttribute
+public class GetUserIdAttribute : ActionFilterAttribute
 {
     public override void OnActionExecuting(ActionExecutingContext context)
     {

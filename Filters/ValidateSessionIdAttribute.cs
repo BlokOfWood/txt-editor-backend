@@ -19,7 +19,13 @@ public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : G
 
         base.OnActionExecuting(context);
 
-        var documentId = (int)(context.HttpContext.GetRouteValue("id") ?? throw new Exception("No document id found in url."));
+        var documentIdString = (string)(context.HttpContext.GetRouteValue("id") ?? throw new Exception("No document id found in url."));
+        if (documentIdString == null || !int.TryParse(documentIdString, out int documentId))
+        {
+            context.Result = new BadRequestResult();
+            return;
+        }
+
         var isDocumentOccupiedResult = _occupancyService.IsDocumentOccupied(userId, (long)context.HttpContext.Items["SessionId"]!, documentId);
 
         switch (isDocumentOccupiedResult)

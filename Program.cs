@@ -28,7 +28,7 @@ builder.Services.AddDbContext<MssqlDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddWebSockets((options) =>
 {
-    options.KeepAliveTimeout = TimeSpan.FromSeconds(5);
+    options.KeepAliveTimeout = TimeSpan.FromSeconds(10);
     options.KeepAliveInterval = TimeSpan.FromSeconds(10);
 });
 

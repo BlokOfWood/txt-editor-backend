@@ -35,15 +35,21 @@ public class OccupancyService : IOccupancyService
 
         sessionStateLookup[newSessionId] = (userId, null);
 
-        await newWsSession.SendAsync(new ArraySegment<byte>(newSessionIdBytes), WebSocketMessageType.Binary, true, appLifetime.ApplicationStopping);
+        await newWsSession.SendAsync(
+            ComposeWebsocketMessage(OccupancyWebsocketMessageType.ASSIGN_SESSION_ID, newSessionIdBytes),
+            WebSocketMessageType.Binary,
+            true,
+            appLifetime.ApplicationStopping);
 
-        while (!receiveResult.CloseStatus.HasValue)
+        WebSocketReceiveResult receiveResult;
+        do
         {
             receiveResult = await newWsSession.ReceiveAsync(
                 new ArraySegment<byte>(buffer), appLifetime.ApplicationStopping);
 
             logger.LogInformation("{}", System.Text.Encoding.UTF8.GetString(buffer));
         }
+        while (!receiveResult.CloseStatus.HasValue);
 
         if (isAppStopping) return;
 
@@ -53,6 +59,9 @@ public class OccupancyService : IOccupancyService
                 documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
         }
     }
+
+    private static ArraySegment<byte> ComposeWebsocketMessage(OccupancyWebsocketMessageType messageType, byte[] sentBytes)
+        => new([(byte)messageType, .. sentBytes]);
 
     public DocumentLockOpResult TryOccupyDocument(int userId, long sessionId, int documentId)
     {

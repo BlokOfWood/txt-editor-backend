@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using aresu_txt_editor_backend.Interfaces;
-using Microsoft.VisualBasic;
+using aresu_txt_editor_backend.Models.Enums;
 
 namespace aresu_txt_editor_backend.Services;
 
@@ -71,14 +71,19 @@ public class OccupancyService : IOccupancyService
         if (occupiedDocumentEntry.userId != userId)
             return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
 
-        if (documentStateLookup.ContainsKey(documentId))
-            return DocumentLockOpResult.DOCUMENT_OCCUPIED;
+        if (documentStateLookup.TryGetValue(documentId, out var occupyingSessionId) && occupyingSessionId != sessionId)
+            return DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
 
-        if (occupiedDocumentEntry.documentId is not null)
-            documentStateLookup.TryRemove(documentId, out var _);
+        if (occupiedDocumentEntry.documentId != documentId)
+        {
+            if (occupiedDocumentEntry.documentId is not null)
+            {
+                documentStateLookup.TryRemove(documentId, out var _);
+            }
 
-        sessionStateLookup[sessionId] = (userId, documentId);
-        documentStateLookup[documentId] = sessionId;
+            sessionStateLookup[sessionId] = (userId, documentId);
+            documentStateLookup[documentId] = sessionId;
+        }
 
         return DocumentLockOpResult.SUCCESS;
     }

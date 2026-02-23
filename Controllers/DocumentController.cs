@@ -84,7 +84,7 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
         return tryOccupyDocumentResult switch
         {
             DocumentLockOpResult.INVALID_SESSION_ID or DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH => Unauthorized(),
-            DocumentLockOpResult.DOCUMENT_OCCUPIED => Conflict(),
+            DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION => Conflict(),
             DocumentLockOpResult.SUCCESS => Ok(),
             _ => throw new Exception($"Unexpected result {tryOccupyDocumentResult} returned from TryOccupyDocument()."),
         };

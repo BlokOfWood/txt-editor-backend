@@ -114,6 +114,6 @@ public class OccupancyService : IOccupancyService
         if (!documentStateLookup.TryGetValue(documentId, out var occupyingSessionId))
             return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
 
-        return occupyingSessionId == documentId ? DocumentLockOpResult.DOCUMENT_OCCUPIED_BY_SESSION : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
+        return occupyingSessionId == sessionId ? DocumentLockOpResult.DOCUMENT_OCCUPIED_BY_SESSION : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
     }
 }

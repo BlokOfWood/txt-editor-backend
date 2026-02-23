@@ -26,8 +26,6 @@ public class OccupancyService : IOccupancyService
     public async Task NewSessionAsync(int userId, WebSocket newWsSession)
     {
         var buffer = new byte[1024 * 4];
-        var receiveResult = await newWsSession.ReceiveAsync(
-            new ArraySegment<byte>(buffer), appLifetime.ApplicationStopping);
 
         byte[] newSessionIdBytes = RandomNumberGenerator.GetBytes(8);
         while (sessionStateLookup.ContainsKey(BitConverter.ToInt64(newSessionIdBytes)))

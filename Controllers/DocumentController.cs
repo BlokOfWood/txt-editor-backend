@@ -1,4 +1,5 @@
 using aresu_txt_editor_backend.Filters;
+using aresu_txt_editor_backend.Infrastructure;
 using aresu_txt_editor_backend.Interfaces;
 using aresu_txt_editor_backend.Models.Dtos;
 using Microsoft.AspNetCore.Authorization;
@@ -140,7 +141,7 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
         using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
         int userId = (int)HttpContext.Items["UserId"]!;
-        await _occupancyService.NewSessionAsync(userId, webSocket);
+        await _occupancyService.NewSessionAsync(userId, new WebSocketConnection(webSocket));
     }
 
 #if MOCKING

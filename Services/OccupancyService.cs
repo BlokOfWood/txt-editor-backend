@@ -1,8 +1,9 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
+using aresu_txt_editor_backend.Infrastructure;
 using aresu_txt_editor_backend.Interfaces;
-using aresu_txt_editor_backend.Models.Enums;
+using aresu_txt_editor_backend.Models.Messages;
 
 namespace aresu_txt_editor_backend.Services;
 
@@ -23,7 +24,7 @@ public class OccupancyService : IOccupancyService
         appLifetime.ApplicationStopping.Register(() => isAppStopping = true);
     }
 
-    public async Task NewSessionAsync(int userId, WebSocket newWsSession)
+    public async Task NewSessionAsync(int userId, WebSocketConnection newWsSession)
     {
         var buffer = new byte[1024 * 4];
 
@@ -31,37 +32,28 @@ public class OccupancyService : IOccupancyService
         while (sessionStateLookup.ContainsKey(BitConverter.ToInt64(newSessionIdBytes)))
             newSessionIdBytes = RandomNumberGenerator.GetBytes(8);
 
-        long newSessionId = BitConverter.ToInt64(newSessionIdBytes);
+        AssignSessionIdMessage assignSessionIdMessage = new(newSessionIdBytes);
 
-        sessionStateLookup[newSessionId] = (userId, null);
+        sessionStateLookup[assignSessionIdMessage.SessionId] = (userId, null);
 
         await newWsSession.SendAsync(
-            ComposeWebsocketMessage(OccupancyWebsocketMessageType.ASSIGN_SESSION_ID, newSessionIdBytes),
-            WebSocketMessageType.Binary,
-            true,
+            assignSessionIdMessage,
             appLifetime.ApplicationStopping);
 
         WebSocketReceiveResult receiveResult;
         do
         {
-            receiveResult = await newWsSession.ReceiveAsync(
-                new ArraySegment<byte>(buffer), appLifetime.ApplicationStopping);
-
-            logger.LogInformation("{}", System.Text.Encoding.UTF8.GetString(buffer));
+            receiveResult = await newWsSession.ReceiveAsync(buffer, appLifetime.ApplicationStopping);
         }
         while (!receiveResult.CloseStatus.HasValue);
 
         if (isAppStopping) return;
 
-        if (sessionStateLookup.TryRemove(newSessionId, out var sessionState))
+        if (sessionStateLookup.TryRemove(assignSessionIdMessage.SessionId, out var sessionState) && sessionState.documentId is not null)
         {
-            if (sessionState.documentId is not null)
-                documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
+            documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
         }
     }
-
-    private static ArraySegment<byte> ComposeWebsocketMessage(OccupancyWebsocketMessageType messageType, byte[] sentBytes)
-        => new([(byte)messageType, .. sentBytes]);
 
     public DocumentLockOpResult TryOccupyDocument(int userId, long sessionId, int documentId)
     {

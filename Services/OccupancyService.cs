@@ -80,7 +80,7 @@ public class OccupancyService : IOccupancyService
         return DocumentLockOpResult.SUCCESS;
     }
 
-    public DocumentLockOpResult TryRemoveDocumentLock(int userId, long sessionId, int documentId)
+    public DocumentLockOpResult TryClearUserOccupancy(int userId, long sessionId)
     {
         if (!sessionStateLookup.TryGetValue(sessionId, out var occupiedDocumentEntry))
             return DocumentLockOpResult.INVALID_SESSION_ID;
@@ -88,13 +88,16 @@ public class OccupancyService : IOccupancyService
         if (occupiedDocumentEntry.userId != userId)
             return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
 
-        if (!documentStateLookup.TryGetValue(documentId, out var documentState))
+        if (occupiedDocumentEntry.documentId is null)
+            return DocumentLockOpResult.NO_DOCUMENT_OCCUPIED_BY_SESSION;
+
+        if (!documentStateLookup.TryGetValue((int)occupiedDocumentEntry.documentId, out var documentState))
             return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
 
         if (documentState != sessionId)
             return DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
 
-        documentStateLookup.TryRemove(documentId, out var _);
+        documentStateLookup.TryRemove((int)occupiedDocumentEntry.documentId, out var _);
         sessionStateLookup[sessionId] = (userId, null);
 
         return DocumentLockOpResult.SUCCESS;

@@ -91,21 +91,21 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
         };
     }
 
-    [HttpPost("{id}/unoccupy")]
+    [HttpPost("unoccupy")]
     [Authorize]
     [GetUserId]
-    [ServiceFilter(typeof(ValidateSessionIdAttribute))]
-    public async Task<IActionResult> UnoccupyDocument(int id)
+    [GetSessionId]
+    public async Task<IActionResult> UnoccupyDocument()
     {
         int userId = (int)HttpContext.Items["UserId"]!;
         long sessionId = (long)HttpContext.Items["SessionId"]!;
 
-        var tryUnoccupyDocumentResult = _occupancyService.TryRemoveDocumentLock(userId, sessionId, id);
+        var tryUnoccupyDocumentResult = _occupancyService.TryClearUserOccupancy(userId, sessionId);
 
         return tryUnoccupyDocumentResult switch
         {
             DocumentLockOpResult.DOCUMENT_UNOCCUPIED => BadRequest(),
-            DocumentLockOpResult.SUCCESS => Ok(),
+            DocumentLockOpResult.SUCCESS or DocumentLockOpResult.NO_DOCUMENT_OCCUPIED_BY_SESSION => Ok(),
             _ => throw new Exception($"Unexpected result {tryUnoccupyDocumentResult} returned from TryRemoveDocumentLock()."),
         };
     }

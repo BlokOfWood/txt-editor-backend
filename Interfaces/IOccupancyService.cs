@@ -7,6 +7,6 @@ public interface IOccupancyService
 {
     public Task NewSessionAsync(int userId, WebSocketConnection newWsSession);
     public DocumentLockOpResult TryOccupyDocument(int userId, long sessionId, int documentId);
-    public DocumentLockOpResult TryRemoveDocumentLock(int userId, long sessionId, int documentId);
+    public DocumentLockOpResult TryClearUserOccupancy(int userId, long sessionId);
     public DocumentLockOpResult IsDocumentOccupied(int userId, long sessionId, int documentId);
 }

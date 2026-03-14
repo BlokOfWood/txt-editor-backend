@@ -41,17 +41,21 @@ public class OccupancyService : IOccupancyService
             appLifetime.ApplicationStopping);
 
         WebSocketReceiveResult receiveResult;
-        do
+        try
         {
-            receiveResult = await newWsSession.ReceiveAsync(buffer, appLifetime.ApplicationStopping);
+            do
+            {
+                receiveResult = await newWsSession.ReceiveAsync(buffer, appLifetime.ApplicationStopping);
+            }
+            while (!receiveResult.CloseStatus.HasValue);
         }
-        while (!receiveResult.CloseStatus.HasValue);
-
-        if (isAppStopping) return;
-
-        if (sessionStateLookup.TryRemove(assignSessionIdMessage.SessionId, out var sessionState) && sessionState.documentId is not null)
+        catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {}
+        finally
         {
-            documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
+            if (!isAppStopping && sessionStateLookup.TryRemove(assignSessionIdMessage.SessionId, out var sessionState) && sessionState.documentId is not null)
+            {
+                documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
+            }
         }
     }
 

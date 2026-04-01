@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using aresu_txt_editor_backend.Data;
@@ -16,6 +17,7 @@ public class OccupancyService : IOccupancyService
     private readonly ILogger<OccupancyService> logger;
     private readonly IDbContextFactory<MssqlDbContext> dbContextFactory;
     private readonly IHostApplicationLifetime appLifetime;
+    private readonly ConcurrentDictionary<long, WebSocketConnection> sessionWebsockets = new();
     bool isAppStopping = false;
 
     public OccupancyService(ILogger<OccupancyService> _logger, IDbContextFactory<MssqlDbContext> _dbContextFactory, IHostApplicationLifetime _appLifetime)
@@ -61,7 +63,6 @@ public class OccupancyService : IOccupancyService
                 (e.InnerException is SqlException sqlE && sqlE.Number is (int)MssqlErrorCode.CannotInsertDuplicateKey)
             {
                 logger.LogWarning("Duplicate session id generated! Key: {}", BitConverter.ToInt64(newSessionIdBytes));
-                break;
             }
             catch
             {
@@ -75,6 +76,21 @@ public class OccupancyService : IOccupancyService
         await newWsSession.SendAsync(
             assignSessionIdMessage,
             appLifetime.ApplicationStopping);
+
+        if (!sessionWebsockets.TryAdd(assignSessionIdMessage.SessionId, newWsSession))
+        {
+            throw new Exception("Failed to add new websocket session to websocket dictionary.");
+        }
+
+        var notifyTasks = await dbContext.UserSessions
+            .Where(session => session.UserId == userId && session.TextDocumentId != null)
+            .Select((session) =>
+                newWsSession.SendAsync(
+                    new DocumentOccupationMessage((int)session.TextDocumentId!, session.SessionId),
+                    appLifetime.ApplicationStopping))
+            .ToListAsync();
+
+        await Task.WhenAll(notifyTasks);
 
         WebSocketReceiveResult receiveResult;
         try
@@ -114,6 +130,27 @@ public class OccupancyService : IOccupancyService
             await dbContext.SaveChangesAsync();
         }
 
+        try
+        {
+            await Task.WhenAll((await dbContext.UserSessions
+            .Where(session => session.UserId == userId)
+            .Select(session => session.SessionId)
+            .ToListAsync())
+            .Select((session) =>
+            {
+                if (!sessionWebsockets.TryGetValue(session, out var websocket))
+                {
+                    throw new Exception($"No WebSocket found for given session {sessionId}");
+                }
+
+                return websocket.SendAsync(new DocumentOccupationMessage(documentId, sessionId), appLifetime.ApplicationStopping);
+            }));
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "");
+        }
+
         return DocumentLockOpResult.SUCCESS;
     }
 
@@ -127,6 +164,29 @@ public class OccupancyService : IOccupancyService
 
         if (session.TextDocumentId is null)
             return DocumentLockOpResult.NO_DOCUMENT_OCCUPIED_BY_SESSION;
+        else
+        {
+            try
+            {
+                await Task.WhenAll((await dbContext.UserSessions
+                .Where(session => session.UserId == userId)
+                .Select(session => session.SessionId)
+                .ToListAsync())
+                .Select((notifiedSession) =>
+                {
+                    if (!sessionWebsockets.TryGetValue(notifiedSession, out var websocket))
+                    {
+                        throw new Exception($"No WebSocket found for given session {sessionId}");
+                    }
+
+                    return websocket.SendAsync(new DocumentUnoccupationMessage((int)session.TextDocumentId), appLifetime.ApplicationStopping);
+                }));
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "");
+            }
+        }
 
         session.TextDocumentId = null;
         await dbContext.SaveChangesAsync();

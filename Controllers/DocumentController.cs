@@ -80,11 +80,11 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
         int userId = (int)HttpContext.Items["UserId"]!;
         long sessionId = (long)HttpContext.Items["SessionId"]!;
 
-        var tryOccupyDocumentResult = _occupancyService.TryOccupyDocument(userId, sessionId, id);
+        var tryOccupyDocumentResult = await _occupancyService.TryOccupyDocumentAsync(userId, sessionId, id);
 
         return tryOccupyDocumentResult switch
         {
-            DocumentLockOpResult.INVALID_SESSION_ID or DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH => Unauthorized(),
+            DocumentLockOpResult.INVALID_SESSION_ID => Unauthorized(),
             DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION => Conflict(),
             DocumentLockOpResult.SUCCESS => Ok(),
             _ => throw new Exception($"Unexpected result {tryOccupyDocumentResult} returned from TryOccupyDocument()."),
@@ -100,12 +100,13 @@ public class DocumentController(IDocumentService _documentService, IOccupancySer
         int userId = (int)HttpContext.Items["UserId"]!;
         long sessionId = (long)HttpContext.Items["SessionId"]!;
 
-        var tryUnoccupyDocumentResult = _occupancyService.TryClearUserOccupancy(userId, sessionId);
+        var tryUnoccupyDocumentResult = await _occupancyService.TryClearUserOccupancyAsync(userId, sessionId);
 
         return tryUnoccupyDocumentResult switch
         {
             DocumentLockOpResult.DOCUMENT_UNOCCUPIED => BadRequest(),
             DocumentLockOpResult.SUCCESS or DocumentLockOpResult.NO_DOCUMENT_OCCUPIED_BY_SESSION => Ok(),
+            DocumentLockOpResult.INVALID_SESSION_ID => Unauthorized(),
             _ => throw new Exception($"Unexpected result {tryUnoccupyDocumentResult} returned from TryRemoveDocumentLock()."),
         };
     }

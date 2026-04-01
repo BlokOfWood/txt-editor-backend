@@ -5,10 +5,20 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace aresu_txt_editor_backend.Filters;
 
-public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : GetSessionIdAttribute
+public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : GetSessionIdAttribute 
 {
-    public override void OnActionExecuting(ActionExecutingContext context)
+    public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        string? sessionIdString = context.HttpContext.Request.Headers["SessionId"].FirstOrDefault();
+
+        if (sessionIdString is null || !long.TryParse(sessionIdString, out long sessionId))
+        {
+            context.Result = new UnauthorizedResult();
+            return;
+        }
+
+        context.HttpContext.Items["SessionId"] = sessionId;
+
         var userIdString = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (userIdString == null || !int.TryParse(userIdString, out int userId))
@@ -17,8 +27,6 @@ public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : G
             return;
         }
 
-        base.OnActionExecuting(context);
-
         var documentIdString = (string)(context.HttpContext.GetRouteValue("id") ?? throw new Exception("No document id found in url."));
         if (documentIdString == null || !int.TryParse(documentIdString, out int documentId))
         {
@@ -26,11 +34,11 @@ public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : G
             return;
         }
 
-        var isDocumentOccupiedResult = _occupancyService.IsDocumentOccupied(userId, (long)context.HttpContext.Items["SessionId"]!, documentId);
+        var isDocumentOccupiedResult = await _occupancyService.IsDocumentOccupiedAsync(userId, (long)context.HttpContext.Items["SessionId"]!, documentId);
 
         switch (isDocumentOccupiedResult)
         {
-            case DocumentLockOpResult.INVALID_SESSION_ID or DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH:
+            case DocumentLockOpResult.INVALID_SESSION_ID:
                 context.Result = new UnauthorizedResult();
                 return;
             case DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION:
@@ -39,5 +47,7 @@ public class ValidateSessionIdAttribute(IOccupancyService _occupancyService) : G
         }
 
         context.HttpContext.Items["SessionState"] = isDocumentOccupiedResult;
+
+        await next();
     }
 }

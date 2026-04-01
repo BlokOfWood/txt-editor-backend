@@ -24,8 +24,12 @@ builder.Services.Configure<AuthConfiguration>(configSection);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<MssqlDbContext>(options =>
+
+builder.Services.AddDbContextFactory<MssqlDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped(scope => 
+    scope.GetRequiredService<IDbContextFactory<MssqlDbContext>>().CreateDbContext());
+
 builder.Services.AddWebSockets((options) =>
 {
     options.KeepAliveTimeout = TimeSpan.FromSeconds(10);

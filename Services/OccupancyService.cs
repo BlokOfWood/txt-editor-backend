@@ -1,40 +1,76 @@
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
+using aresu_txt_editor_backend.Data;
 using aresu_txt_editor_backend.Infrastructure;
 using aresu_txt_editor_backend.Interfaces;
+using aresu_txt_editor_backend.Models;
 using aresu_txt_editor_backend.Models.Messages;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace aresu_txt_editor_backend.Services;
 
 public class OccupancyService : IOccupancyService
 {
-    // Key is SessionId 
-    private readonly ConcurrentDictionary<long, (int userId, int? documentId)> sessionStateLookup = [];
-    // Key is DocumentId, Value is SessionId
-    private readonly ConcurrentDictionary<int, long> documentStateLookup = [];
     private readonly ILogger<OccupancyService> logger;
+    private readonly IDbContextFactory<MssqlDbContext> dbContextFactory;
     private readonly IHostApplicationLifetime appLifetime;
     bool isAppStopping = false;
 
-    public OccupancyService(ILogger<OccupancyService> _logger, IHostApplicationLifetime _appLifetime)
+    public OccupancyService(ILogger<OccupancyService> _logger, IDbContextFactory<MssqlDbContext> _dbContextFactory, IHostApplicationLifetime _appLifetime)
     {
         logger = _logger;
+        dbContextFactory = _dbContextFactory;
         appLifetime = _appLifetime;
         appLifetime.ApplicationStopping.Register(() => isAppStopping = true);
+
+
+        using var dbContext = dbContextFactory.CreateDbContext();
+        dbContext.UserSessions.ExecuteDelete();
     }
 
     public async Task NewSessionAsync(int userId, WebSocketConnection newWsSession)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
         var buffer = new byte[1024 * 4];
 
-        byte[] newSessionIdBytes = RandomNumberGenerator.GetBytes(8);
-        while (sessionStateLookup.ContainsKey(BitConverter.ToInt64(newSessionIdBytes)))
-            newSessionIdBytes = RandomNumberGenerator.GetBytes(8);
+        byte[] newSessionIdBytes = [];
+        bool assignedSessionId = false;
+        EntityEntry<UserSession>? newSession = null;
+
+        while (!assignedSessionId)
+        {
+            try
+            {
+                newSessionIdBytes = RandomNumberGenerator.GetBytes(8);
+
+                newSession = await dbContext.UserSessions.AddAsync(new()
+                {
+                    SessionId = BitConverter.ToInt64(newSessionIdBytes),
+                    UserId = userId,
+                    TextDocumentId = null,
+                });
+
+                await dbContext.SaveChangesAsync();
+
+                assignedSessionId = true;
+            }
+            catch (DbUpdateException e) when
+                (e.InnerException is SqlException sqlE && sqlE.Number is (int)MssqlErrorCode.CannotInsertDuplicateKey)
+            {
+                logger.LogWarning("Duplicate session id generated! Key: {}", BitConverter.ToInt64(newSessionIdBytes));
+                break;
+            }
+            catch
+            {
+                break;
+                throw;
+            }
+        }
 
         AssignSessionIdMessage assignSessionIdMessage = new(newSessionIdBytes);
-
-        sessionStateLookup[assignSessionIdMessage.SessionId] = (userId, null);
 
         await newWsSession.SendAsync(
             assignSessionIdMessage,
@@ -49,75 +85,69 @@ public class OccupancyService : IOccupancyService
             }
             while (!receiveResult.CloseStatus.HasValue);
         }
-        catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {}
+        catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) { }
         finally
         {
-            if (!isAppStopping && sessionStateLookup.TryRemove(assignSessionIdMessage.SessionId, out var sessionState) && sessionState.documentId is not null)
+            if (!isAppStopping)
             {
-                documentStateLookup.TryRemove((int)sessionState.documentId, out var _);
+                dbContext.Remove(newSession!.Entity);
+                await dbContext.SaveChangesAsync();
             }
         }
     }
 
-    public DocumentLockOpResult TryOccupyDocument(int userId, long sessionId, int documentId)
+    public async Task<DocumentLockOpResult> TryOccupyDocumentAsync(int userId, long sessionId, int documentId)
     {
-        if (!sessionStateLookup.TryGetValue(sessionId, out var occupiedDocumentEntry))
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        var session = await dbContext.UserSessions.FindAsync(sessionId, userId);
+        if (session is null)
             return DocumentLockOpResult.INVALID_SESSION_ID;
 
-        if (occupiedDocumentEntry.userId != userId)
-            return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
-
-        if (documentStateLookup.TryGetValue(documentId, out var occupyingSessionId) && occupyingSessionId != sessionId)
+        var sessionWithDocument = await dbContext.UserSessions.Where(session => session.TextDocumentId == documentId).FirstOrDefaultAsync();
+        if (sessionWithDocument is not null && sessionWithDocument.SessionId != sessionId)
             return DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
 
-        if (occupiedDocumentEntry.documentId != documentId)
+        if (session.TextDocumentId != documentId)
         {
-            if (occupiedDocumentEntry.documentId is not null)
-            {
-                documentStateLookup.TryRemove(documentId, out var _);
-            }
-
-            sessionStateLookup[sessionId] = (userId, documentId);
-            documentStateLookup[documentId] = sessionId;
+            session.TextDocumentId = documentId;
+            await dbContext.SaveChangesAsync();
         }
 
         return DocumentLockOpResult.SUCCESS;
     }
 
-    public DocumentLockOpResult TryClearUserOccupancy(int userId, long sessionId)
+    public async Task<DocumentLockOpResult> TryClearUserOccupancyAsync(int userId, long sessionId)
     {
-        if (!sessionStateLookup.TryGetValue(sessionId, out var occupiedDocumentEntry))
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        var session = await dbContext.UserSessions.FindAsync(sessionId, userId);
+        if (session is null)
             return DocumentLockOpResult.INVALID_SESSION_ID;
 
-        if (occupiedDocumentEntry.userId != userId)
-            return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
-
-        if (occupiedDocumentEntry.documentId is null)
+        if (session.TextDocumentId is null)
             return DocumentLockOpResult.NO_DOCUMENT_OCCUPIED_BY_SESSION;
 
-        if (!documentStateLookup.TryGetValue((int)occupiedDocumentEntry.documentId, out var documentState))
-            return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
-
-        if (documentState != sessionId)
-            return DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
-
-        documentStateLookup.TryRemove((int)occupiedDocumentEntry.documentId, out var _);
-        sessionStateLookup[sessionId] = (userId, null);
+        session.TextDocumentId = null;
+        await dbContext.SaveChangesAsync();
 
         return DocumentLockOpResult.SUCCESS;
     }
 
-    public DocumentLockOpResult IsDocumentOccupied(int userId, long sessionId, int documentId)
+    public async Task<DocumentLockOpResult> IsDocumentOccupiedAsync(int userId, long sessionId, int documentId)
     {
-        if (!sessionStateLookup.TryGetValue(sessionId, out var occupiedDocumentEntry))
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        var session = await dbContext.UserSessions.FindAsync(sessionId, userId);
+        if (session is null)
             return DocumentLockOpResult.INVALID_SESSION_ID;
 
-        if (occupiedDocumentEntry.userId != userId)
-            return DocumentLockOpResult.SESSION_ID_OWNER_DOES_NOT_MATCH;
-
-        if (!documentStateLookup.TryGetValue(documentId, out var occupyingSessionId))
+        var sessionWithDocument = await dbContext.UserSessions.Where(session => session.TextDocumentId == documentId).FirstAsync();
+        if (sessionWithDocument is null)
             return DocumentLockOpResult.DOCUMENT_UNOCCUPIED;
 
-        return occupyingSessionId == sessionId ? DocumentLockOpResult.DOCUMENT_OCCUPIED_BY_SESSION : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
+        return sessionWithDocument.SessionId == sessionId
+            ? DocumentLockOpResult.DOCUMENT_OCCUPIED_BY_SESSION
+            : DocumentLockOpResult.DOCUMENT_NOT_OCCUPIED_BY_SESSION;
     }
 }

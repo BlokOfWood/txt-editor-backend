@@ -7,6 +7,7 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
 {
     public DbSet<TextDocument> TextDocuments { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,23 @@ public class MssqlDbContext(DbContextOptions<MssqlDbContext> options) : DbContex
             .WithMany()
             .HasForeignKey(doc => doc.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        var userSessions = modelBuilder.Entity<UserSession>();
+
+        userSessions
+            .HasOne<User>()
+            .WithMany()
+            .HasForeignKey(session => session.UserId)
+            .IsRequired();
+
+        userSessions
+            .HasOne<TextDocument>()
+            .WithMany()
+            .HasForeignKey(session => session.TextDocumentId);
+
+        userSessions
+            .HasIndex(session => new { session.TextDocumentId });
+
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
